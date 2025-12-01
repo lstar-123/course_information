@@ -1,3 +1,4 @@
+# parse_course_this_week.py
 # -*- coding: utf-8 -*-
 # 自动登录教务系统并导出当前周课程表（支持OCR验证码识别）
 # 环境依赖: pip install requests beautifulsoup4 pillow pytesseract lxml openpyxl
@@ -7,11 +8,17 @@ import time
 import urllib.parse
 from pathlib import Path
 from datetime import datetime, timedelta, timezone
+
+import openpyxl
 import requests
 from bs4 import BeautifulSoup
-from PIL import Image, ImageFilter, ImageEnhance
+from PIL import Image, ImageFilter, ImageEnhance, ImageOps
 import pytesseract
 import webbrowser
+import xlrd
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Font
+from openpyxl.utils import get_column_letter
 
 # ---------------- CONFIG ----------------
 BASE = "https://jwyth.hnkjxy.net.cn"
@@ -62,55 +69,67 @@ def save_text(path: Path, text: str):
     return str(path)
 
 # ---------- OCR 部分 ----------
-def preprocess_image(image_path):
-    """对验证码图像进行预处理"""
-    img = Image.open(image_path).convert("L")
-    img = img.filter(ImageFilter.MedianFilter())
-    enhancer = ImageEnhance.Contrast(img)
-    img = enhancer.enhance(2)
-    threshold = 140
-    img = img.point(lambda x: 0 if x < threshold else 255, '1')
+def preprocess_image(image_path: Path):
+    """对验证码图片进行预处理，提高 OCR 识别率"""
+    img = Image.open(image_path).convert("L")  # 灰度化
+    img = ImageOps.invert(img)  # 反色，白底黑字
+    img = img.filter(ImageFilter.MedianFilter())  # 中值滤波去噪
+    threshold = 150
+    img = img.point(lambda x: 255 if x > threshold else 0)  # 二值化
     return img
 
-def recognize_captcha(image_path, retries=3):
-    """多次识别验证码，自动过滤非字母数字"""
-    for i in range(retries):
-        img = preprocess_image(image_path)
-        text = pytesseract.image_to_string(
-            img,
-            config="--psm 7 -c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        )
-        text = "".join(c for c in text if c.isalnum()).strip()
-        if len(text) == 4:
-            print(f"🤖 OCR 识别中间结果: {text}")
-            return text
-        time.sleep(0.5)
-    print("🤖 OCR 识别失败，进入人工输入模式。")
-    return None
+def recognize_captcha(image_path: str) -> str:
+    """对验证码图片进行预处理并使用OCR识别"""
+    try:
+        img = Image.open(image_path)
+
+        # 转为灰度图
+        img = img.convert("L")
+
+        # 二值化（去背景）
+        threshold = 140
+        img = img.point(lambda x: 255 if x > threshold else 0)
+
+        # 去除边缘噪点
+        img = ImageOps.expand(img, border=5, fill="white")
+        img = img.filter(ImageFilter.MedianFilter(size=3))
+
+        # OCR识别
+        config = "--psm 7 -c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        text = pytesseract.image_to_string(img, config=config)
+
+        # 清洗输出结果
+        text = "".join(ch for ch in text.strip() if ch.isalnum())
+        if len(text) < 4:  # 验证码一般为4位
+            raise ValueError("识别结果过短")
+        print(f"🤖 OCR 识别验证码: {text}")
+        return text
+    except Exception as e:
+        print(f"🤖 OCR 识别验证码: [识别失败]（{e}）")
+        return ""
 
 def download_captcha_and_ocr(session):
+    """下载验证码 -> OCR 识别"""
     r = session.get(CAPTCHA_URL + "?t=" + str(int(time.time())), headers=COMMON_HEADERS, timeout=15)
     r.raise_for_status()
     save_dir = Path(__file__).parent / "captcha_image_library"
     save_dir.mkdir(exist_ok=True)
     filename = f"captcha_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
     save_path = save_dir / filename
+
     with open(save_path, "wb") as f:
         f.write(r.content)
+        f.flush()
     print("🖼 验证码已保存到:", save_path)
 
     captcha_text = recognize_captcha(save_path)
-    if not captcha_text:
+    if not captcha_text or len(captcha_text) < 4:
+        print("⚠️ OCR 识别不稳定，请人工输入:")
         try:
-            if os.name == "nt":
-                os.startfile(str(save_path))
-            else:
-                webbrowser.open("file://" + str(save_path))
+            webbrowser.open("file://" + str(save_path))
         except Exception:
-            print("⚠️ 无法自动打开验证码，请手动查看:", save_path)
+            pass
         captcha_text = input("请输入验证码（区分大小写）：").strip()
-    else:
-        print(f"🤖 OCR 自动识别验证码: {captcha_text}")
     return captcha_text
 
 # ---------------- LOGIN ----------------
@@ -145,15 +164,15 @@ def login_via_raw_body():
     return s, r_post
 
 # ---------------- 自动判断当前周 ----------------
-def get_current_week():
-    open_day = datetime(2025, 9, 15, tzinfo=timezone(timedelta(hours=8)))  # 开学日
-    now = datetime.now(timezone(timedelta(hours=8)))
-    days_diff = (now - open_day).days
-    if days_diff < 0:
-        return 1
-    return (days_diff // 7) + 1
+# def get_current_week():
+#     open_day = datetime(2025, 9, 15, tzinfo=timezone(timedelta(hours=8)))  # 开学日
+#     now = datetime.now(timezone(timedelta(hours=8)))
+#     days_diff = (now - open_day).days
+#     if days_diff < 0:
+#         return 1
+#     return (days_diff // 7) + 1
 
-# ---------------- EXPORT XLS ----------------
+# ---------------- EXPORT XLS (导出 1~21 周所有课程) ----------------
 def export_course_xls(session, login_resp):
     if 300 <= login_resp.status_code < 400 and login_resp.headers.get("Location"):
         loc = login_resp.headers["Location"]
@@ -162,39 +181,53 @@ def export_course_xls(session, login_resp):
         print(f"✅ 登录成功！访问重定向地址以激活登录态: {loc}")
         session.get(loc, headers=COMMON_HEADERS, timeout=15)
 
-        week_number = get_current_week()
-        print(f"📅 自动识别当前为第 {week_number} 周")
-
-        params = {
-            "xnxq01id": "2025-2026-1",
-            "zc": str(week_number),
-            "kbjcmsid": "C26030BDC5F8456CBE75B8779AED2F8A",
-            "wkbkc": "1",
-        }
-
-        export_headers = {
-            "Referer": f"{BASE}/jsxsd/xskb/xskb_list.do",
-            "Origin": BASE,
-            "User-Agent": COMMON_HEADERS["User-Agent"],
-            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-        }
-
-        print(f"📤 正在导出第 {week_number} 周课程表...")
-        r_export = session.get(COURSE_EXPORT_URL, headers=export_headers, params=params, timeout=20)
+        # week_number = get_current_week()
+        # print(f"📅 自动识别当前为第 {week_number} 周")
 
         out_dir = Path("extracted_courses")
         out_dir.mkdir(exist_ok=True)
-        save_path = out_dir / f"courses_week_{week_number:02}.xls"
-        with open(save_path, "wb") as f:
-            f.write(r_export.content)
 
-        content_bytes = r_export.content
-        if b"loginForm" in content_bytes or "请输入账号".encode("utf-8") in content_bytes:
-            print("❌ 导出失败: ⚠️ 登录态失效，返回的是登录页 HTML")
-        else:
-            print(f"✅ 导出成功: {save_path}")
+        # 循环导出 1~21 周
+        for week in range(1, 22):
+            print(f"📤 正在导出第 {week} 周课程表...")
+
+            params = {
+                "xnxq01id": "2025-2026-1",
+                "zc": str(week),
+                "kbjcmsid": "C26030BDC5F8456CBE75B8779AED2F8A",
+                "wkbkc": "1",
+            }
+
+            export_headers = {
+                "Referer": f"{BASE}/jsxsd/xskb/xskb_list.do",
+                "Origin": BASE,
+                "User-Agent": COMMON_HEADERS["User-Agent"],
+                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+            }
+
+            r_export = session.get(
+                COURSE_EXPORT_URL,
+                headers=export_headers,
+                params=params,
+                timeout=20
+            )
+
+            save_path = out_dir / f"courses_week_{week:02}.xls"
+            with open(save_path, "wb") as f:
+                f.write(r_export.content)
+
+            content_bytes = r_export.content
+            if (b"loginForm" in content_bytes) or ("请输入账号".encode("utf-8") in content_bytes):
+                print(f"❌ 第 {week} 周导出失败：登录态失效（返回登录页HTML）")
+            else:
+                print(f"✅ 第 {week} 周导出成功: {save_path}")
+
+        print("🎉 所有 1~21 周课程导出完成！文件保存在 extracted_courses/ 目录下")
+
     else:
-        print("❌ 登录未成功，请检查 debug_raw_post.html")
+        print("❌ 登录未成功，请检查 debug_loginpage.html")
+
+
 
 # ---------------- MAIN ----------------
 if __name__ == "__main__":
