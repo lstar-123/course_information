@@ -1,0 +1,45 @@
+/* App 容器 */
+.app-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.app-header {
+    background: var(--bg-card);
+    padding: var(--spacing-md);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+    box-shadow: var(--shadow-sm);
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.header-content h1 {
+    font-size: 1.25rem;
+    color: var(--primary-color);
+}
+
+.current-date {
+    font-size: 0.9rem;
+    color: var(--text-secondary);
+}
+
+.app-main {
+    padding: var(--spacing-md);
+    flex: 1;
+}
+
+/* 响应式调整 */
+@media (max-width: 768px) {
+    .app-main {
+        padding: var(--spacing-sm);
+    }
+}

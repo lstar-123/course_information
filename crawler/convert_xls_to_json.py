@@ -1,13 +1,51 @@
 import xlrd
 import json
+import re
 from pathlib import Path
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 
 # ------------------ 配置 --------------------
 WEEKDAYS = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"]
 
 # 设置学期开始日期
-TERM_START = datetime(2025, 9, 15) # 第一周的周一
+TERM_START = datetime(2025, 9, 15, tzinfo=timezone(timedelta(hours=8))) # 第一周的周一
+
+# ------------------ 自动解析单元格文本 ------------------
+def parse_cell_text(cell_text):
+    """
+    解析单元格内容，自动识别：
+    - 课程名
+    - 教室
+    - 任课教师
+    - 周次（可忽略）
+    cell_text: str, 多行字符串
+    """
+
+    # 拆成行
+    lines = [l.strip() for l in str(cell_text).split("\n") if l.strip()]
+
+    if not lines:
+        return None
+
+    name = lines[0]                        # 默认第一行 = 课程名称
+    classroom = None
+
+    # 尝试从其余行中自动识别教室
+    for line in lines[1:]:
+        # 常见教室特征：含 A101 / 教室 / 综合楼 / 实训楼 等字样
+        if re.search(r"(教室|实验|楼|室|A\d+|B\d+|C\d+)", line):
+            classroom = line
+            break
+
+    # 无法找到教室 → fallback
+    if not classroom:
+        classroom = "未知教室"
+
+    return {
+        "name": name,
+        "classroom": classroom
+    }
+
 
 # ------------------ 日期计算 --------------------
 def get_date_for_week_and_day(week_num, weekday_index):
@@ -44,24 +82,16 @@ def parse_one_xls(path, week_num):
             if not cell or str(cell).strip() == "":
                 continue  # 无课程
 
-            lines = [l.strip() for l in str(cell).split("\n") if l.strip()]
-
-            if len(lines) < 1:
-                continue # 一行数据都没有，直接跳过
-
-            name = lines[0] # 第一行 = 课程名称
-
-            if len(lines) >= 4:
-                classroom = lines[3] # 正常情况
-            else:
-                classroom = "未知教室" # 不够四行 → 自动填补
+            parsed = parse_cell_text(cell)
+            if not parsed:
+                continue
 
             courses.append({
                 "weekday": weekday,
                 "date": date_str,        # 👈 新增：日期
                 "section": section,
-                "name": name,
-                "classroom": classroom
+                "name": parsed["name"],
+                "classroom": parsed["classroom"],
             })
 
     return courses
@@ -74,11 +104,11 @@ def parse_all(directory="extracted_courses"):
     for xls in sorted(directory.glob("*.xls")):
         week_num = xls.stem.split("_")[-1]  # courses_week_01 → 01
         courses = parse_one_xls(xls, week_num)
-        results[week_num] = courses
+        results[f"{week_num:02}"] = courses
 
     # 输出 JSON
-    out_path = Path("data/all_weeks_courses.json")
-    out_path.parent.mkdir(exist_ok=True)
+    out_path = Path("../frontend/dist/all_weeks_courses.json").resolve()
+    out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(json.dumps(results, ensure_ascii=False, indent=2), encoding="utf-8")
 
     print("完成：已生成", out_path)

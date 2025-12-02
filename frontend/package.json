@@ -1,0 +1,11 @@
+{
+  "name": "course-schedule-frontend",
+  "version": "1.0.0",
+  "description": "Vanilla JS Course Schedule Viewer",
+  "main": "js/main.js",
+  "scripts": {
+    "start": "npx serve ."
+  },
+  "author": "Frontend Engineer",
+  "license": "MIT"
+}

@@ -1,0 +1,41 @@
+:root {
+    /* 调色板 - 统一主色 Blue #2979ff */
+    --primary-color: #2979ff;
+    --primary-light: #e3f2fd;
+    --primary-dark: #1565c0;
+    --text-main: #333333;
+    --text-secondary: #666666;
+    --text-light: #999999;
+    --bg-body: #f5f7fa;
+    --bg-card: #ffffff;
+    --border-color: #e0e0e0;
+    
+    /* 间距系统 */
+    --spacing-xs: 4px;
+    --spacing-sm: 8px;
+    --spacing-md: 16px;
+    --spacing-lg: 24px;
+
+    /* 圆角与阴影 */
+    --radius-md: 12px;
+    --radius-sm: 8px;
+    --shadow-sm: 0 2px 8px rgba(0,0,0,0.05);
+    --shadow-md: 0 4px 12px rgba(41, 121, 255, 0.15);
+
+    /* 字体 */
+    --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", sans-serif;
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-family);
+    background-color: var(--bg-body);
+    color: var(--text-main);
+    line-height: 1.5;
+    -webkit-font-smoothing: antialiased;
+}

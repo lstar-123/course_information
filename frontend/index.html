@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>我的课程表</title>
+    
+    <link rel="stylesheet" href="./assets/styles/base.css">
+    <link rel="stylesheet" href="./assets/styles/layout.css">
+    <link rel="stylesheet" href="./assets/styles/components.css">
+</head>
+<body>
+
+    <div id="app" class="app-container">
+        <header class="app-header">
+            <div class="header-content">
+                <h1>课程表</h1>
+                <div id="current-date-display" class="current-date">Loading...</div>
+            </div>
+        </header>
+
+        <main class="app-main">
+            <section id="week-selector-container" class="control-panel"></section>
+
+            <section id="schedule-container" class="schedule-view"></section>
+        </main>
+    </div>
+
+    <script type="module" src="./js/main.js"></script>
+</body>
+</html>
