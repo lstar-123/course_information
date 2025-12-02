@@ -1,5 +1,5 @@
 import { createElement, clearElement } from '../utils/dom.js';
-import { formatFriendlyDate, isSameDate, getSectionStartTime } from '../utils/date.js';
+import { formatFriendlyDate, isSameDate, getSectionStartTime, getTodayInBeijing } from '../utils/date.js';
 import { CourseCard } from './CourseCard.js';
 
 export class ScheduleGrid {
@@ -41,7 +41,9 @@ export class ScheduleGrid {
             // 设置 CSS 变量，告诉 CSS 这一列属于 Grid 的第几列 (1-7)
             dayColumn.style.setProperty('--day-col', i + 1);
 
-            const isToday = isSameDate(dateStr, new Date().toISOString().split('T')[0]);
+            // 设置当前时间
+            const todayStr = getTodayInBeijing();
+            const isToday = isSameDate(dateStr, todayStr);
             if (isToday) dayColumn.classList.add('is-today');
 
             // --- A. 表头 (Grid Row 1) ---

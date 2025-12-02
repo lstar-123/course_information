@@ -36,3 +36,16 @@ export function formatFriendlyDate(dateStr) {
 export function isSameDate(date1, date2) {
     return date1 === date2;
 }
+
+
+// 获取当下北京时间
+export function getTodayInBeijing() {
+    const formatter = new Intl.DateTimeFormat("en-CA", {
+        timeZone: "Asia/Shanghai",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit"
+    });
+
+    return formatter.format(new Date()); // 返回 YYYY-MM-DD（北京时区）
+}
