@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的课程表</title>
     
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/calendar.svg">
     <link rel="stylesheet" href="./assets/styles/base.css">
     <link rel="stylesheet" href="./assets/styles/layout.css">
     <link rel="stylesheet" href="./assets/styles/components.css">
@@ -24,6 +25,27 @@
 
             <section id="schedule-container" class="schedule-view"></section>
         </main>
+
+        <footer class="site-footer">
+            <div class="footer-content">
+                <div class="footer-row copyright">
+                    <span id="copyright-text"></span>
+                </div>
+                
+                <div class="footer-row beian-info">
+                    <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer" class="beian-link">
+                        <span id="icp-text"></span>
+                    </a>
+
+                    <span class="divider">|</span>
+
+                    <a id="police-link" href="" target="_blank" rel="noopener noreferrer" class="beian-link police-link">
+                        <img src="./assets/icons/police.png" alt="警徽" class="police-icon" />
+                        <span id="police-text"></span>
+                    </a>
+                </div>
+            </div>
+        </footer>
     </div>
 
     <script type="module" src="./js/main.js"></script>

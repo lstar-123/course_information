@@ -43,3 +43,70 @@
         padding: var(--spacing-sm);
     }
 }
+
+/* 底部 */
+.site-footer {
+    width: 100%;
+    background-color: #f7f8fa; /* 浅灰底色 */
+    padding: 24px 16px;
+    border-top: 1px solid #e5e6eb;
+    margin-top: auto; /* 配合 Flex 布局沉底 */
+}
+
+.footer-content {
+    max-width: 1200px;
+    margin: 0 auto;
+    text-align: center;
+    font-size: 12px;
+    color: #86909c; /* 弱化字体颜色 */
+    line-height: 1.5;
+}
+
+.footer-row {
+    margin-bottom: 8px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-wrap: wrap; /* 移动端自动换行 */
+    gap: 8px; /* 项目间距 */
+}
+
+/* 链接通用样式 */
+.beian-link {
+    color: inherit; /* 继承父级灰色 */
+    text-decoration: none;
+    transition: color 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+}
+
+.beian-link:hover {
+    color: #2979ff; /* 悬停使用主色 */
+    text-decoration: underline;
+}
+
+/* 分隔符 */
+.divider {
+    color: #e5e6eb;
+    margin: 0 4px;
+}
+
+/* 公安图标特殊处理 */
+.police-icon {
+    width: 16px;
+    height: 16px;
+    margin-right: 4px;
+    vertical-align: middle;
+}
+
+/* 响应式适配 */
+@media (max-width: 480px) {
+    .divider {
+        display: none; /* 手机上隐藏分隔符，直接换行 */
+    }
+    
+    .footer-row {
+        flex-direction: column; /* 手机上垂直排列 */
+        gap: 4px;
+    }
+}
