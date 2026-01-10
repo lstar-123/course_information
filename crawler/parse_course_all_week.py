@@ -1,26 +1,25 @@
-# parse_course_this_week.py
+# parse_course_all_week.py
 # -*- coding: utf-8 -*-
-# 自动登录教务系统并导出当前周课程表（支持OCR验证码识别）
-# 环境依赖: pip install requests beautifulsoup4 pillow pytesseract lxml openpyxl
+# 自动登录教务系统并导出 1~21 周课程表
+#
+# 验证码识别策略（最终版）：
+# ✅ 仅使用 ddddocr
+# ✅ 最多尝试 10 次
+# ✅ 识别结果包含 i → 丢弃重新获取
+# ❌ 不使用 Tesseract
+# ❌ 不使用人工输入兜底
 
 import os
 import time
 import urllib.parse
 from pathlib import Path
-from datetime import datetime, timedelta, timezone
+from datetime import datetime
 
-import openpyxl
 import requests
-from bs4 import BeautifulSoup
-from PIL import Image, ImageFilter, ImageEnhance, ImageOps
-import pytesseract
-import webbrowser
-import xlrd
-from openpyxl import Workbook
-from openpyxl.styles import Alignment, Font
-from openpyxl.utils import get_column_letter
+from PIL import Image  # 仅用于保存调试，无 OCR 处理
+import ddddocr
 
-# ---------------- CONFIG ----------------
+# ================= CONFIG =================
 BASE = "https://jwyth.hnkjxy.net.cn"
 LOGIN_PAGE = BASE + "/"
 SESS_URL = BASE + "/Logon.do?method=logon&flag=sess"
@@ -34,123 +33,122 @@ COMMON_HEADERS = {
         "AppleWebKit/537.36 (KHTML, like Gecko) "
         "Chrome/142.0.0.0 Safari/537.36"
     ),
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8",
     "Accept-Language": "zh-CN,zh;q=0.9",
     "Connection": "keep-alive",
 }
 
 USERNAME = os.environ.get("JW_USERNAME")
 PASSWORD = os.environ.get("JW_PASSWORD") or ""
-if USERNAME is None:
-    raise SystemExit("❌ 请先通过环境变量 JW_USERNAME / JW_PASSWORD 提供登录凭证")
 
-# ---------------- UTIL ----------------
-def extract_hidden_fields(html):
-    soup = BeautifulSoup(html, "html.parser")
-    return {i.get("name"): i.get("value", "") for i in soup.select("input[type=hidden]") if i.get("name")}
+if not USERNAME:
+    raise SystemExit("❌ 请设置环境变量 JW_USERNAME / JW_PASSWORD")
+
+# ================= UTIL =================
+def save_text(path: Path, text: str):
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(text, encoding="utf-8")
 
 def make_encoded(username, password, scode, sxh):
+    """
+    教务系统特有的密码混淆算法
+    """
     code = f"{username}%%%{password}"
     encoded = ""
     i = 0
     for ch in code:
-        if i < len(sxh) and sxh[i].isdigit():
-            n = int(sxh[i])
-        else:
-            n = 0
+        n = int(sxh[i]) if i < len(sxh) and sxh[i].isdigit() else 0
         encoded += ch + scode[:n]
         scode = scode[n:]
         i += 1
     return encoded
 
-def save_text(path: Path, text: str):
-    path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(text, encoding="utf-8")
-    return str(path)
+# ================= OCR CORE（最终收敛版） =================
+print("✅ ddddocr 可用（唯一验证码识别方案）")
+_ocr = ddddocr.DdddOcr(show_ad=False, beta=True)
 
-# ---------- OCR 部分 ----------
-def preprocess_image(image_path: Path):
-    """对验证码图片进行预处理，提高 OCR 识别率"""
-    img = Image.open(image_path).convert("L")  # 灰度化
-    img = ImageOps.invert(img)  # 反色，白底黑字
-    img = img.filter(ImageFilter.MedianFilter())  # 中值滤波去噪
-    threshold = 150
-    img = img.point(lambda x: 255 if x > threshold else 0)  # 二值化
-    return img
-
-def recognize_captcha(image_path: str) -> str:
-    """对验证码图片进行预处理并使用OCR识别"""
+def recognize_captcha_dddocr(image_path: str) -> str:
+    """
+    使用 ddddocr 识别验证码
+    """
     try:
-        img = Image.open(image_path)
-
-        # 转为灰度图
-        img = img.convert("L")
-
-        # 二值化（去背景）
-        threshold = 140
-        img = img.point(lambda x: 255 if x > threshold else 0)
-
-        # 去除边缘噪点
-        img = ImageOps.expand(img, border=5, fill="white")
-        img = img.filter(ImageFilter.MedianFilter(size=3))
-
-        # OCR识别
-        config = "--psm 7 -c tessedit_char_whitelist=0123456789abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        text = pytesseract.image_to_string(img, config=config)
-
-        # 清洗输出结果
-        text = "".join(ch for ch in text.strip() if ch.isalnum())
-        if len(text) < 4:  # 验证码一般为4位
-            raise ValueError("识别结果过短")
-        print(f"🤖 OCR 识别验证码: {text}")
-        return text
+        with open(image_path, "rb") as f:
+            res = _ocr.classification(f.read())
+        res = "".join(c for c in res.lower() if c.isalnum())
+        if len(res) >= 4:
+            print(f"🤖 ddddocr 识别验证码: {res[:4]}")
+            return res[:4]
+        return ""
     except Exception as e:
-        print(f"🤖 OCR 识别验证码: [识别失败]（{e}）")
+        print(f"🤖 ddddocr 识别异常: {e}")
         return ""
 
-def download_captcha_and_ocr(session):
-    """下载验证码 -> OCR 识别"""
-    r = session.get(CAPTCHA_URL + "?t=" + str(int(time.time())), headers=COMMON_HEADERS, timeout=15)
-    r.raise_for_status()
+def is_invalid_captcha(code: str) -> bool:
+    """
+    已知问题：
+    - ddddocr 可能将 l 识别为 i
+    - 实际验证码中不会出现 i
+    """
+    return "i" in code
+
+def download_captcha_and_ocr(session, max_retry=10) -> str:
+    """
+    验证码获取与识别（最终策略）：
+    - 只使用 ddddocr
+    - 含 i → 丢弃
+    - 最多尝试 max_retry 次
+    """
     save_dir = Path(__file__).parent / "captcha_image_library"
     save_dir.mkdir(exist_ok=True)
-    filename = f"captcha_{datetime.now().strftime('%Y%m%d_%H%M%S')}.png"
-    save_path = save_dir / filename
 
-    with open(save_path, "wb") as f:
-        f.write(r.content)
-        f.flush()
-    print("🖼 验证码已保存到:", save_path)
+    for attempt in range(1, max_retry + 1):
+        r = session.get(
+            CAPTCHA_URL + "?t=" + str(int(time.time() * 1000)),
+            timeout=15
+        )
+        r.raise_for_status()
 
-    captcha_text = recognize_captcha(save_path)
-    if not captcha_text or len(captcha_text) < 4:
-        print("⚠️ OCR 识别不稳定，请人工输入:")
-        try:
-            webbrowser.open("file://" + str(save_path))
-        except Exception:
-            pass
-        captcha_text = input("请输入验证码（区分大小写）：").strip()
-    return captcha_text
+        img_path = save_dir / f"captcha_{datetime.now():%Y%m%d_%H%M%S_%f}.png"
+        img_path.write_bytes(r.content)
 
-# ---------------- LOGIN ----------------
+        print(f"🖼 验证码已保存 ({attempt}/{max_retry}): {img_path}")
+
+        code = recognize_captcha_dddocr(str(img_path))
+
+        if not code:
+            print("⚠️ ddddocr 未识别出结果，重新获取验证码")
+            continue
+
+        if is_invalid_captcha(code):
+            print(f"♻️ 检测到非法字符 i（疑似 l→i）：{code}，重新获取验证码")
+            continue
+
+        print(f"✅ 使用验证码: {code}")
+        return code
+
+    raise RuntimeError("❌ 连续 10 次验证码识别失败（ddddocr）")
+
+# ================= LOGIN =================
 def login_via_raw_body():
     s = requests.Session()
     s.headers.update(COMMON_HEADERS)
+
     print("Step1: GET 登录页")
     r1 = s.get(LOGIN_PAGE, timeout=15)
-    save_text(Path("debug") / "debug_loginpage.html", r1.text)
+    save_text(Path("debug/debug_loginpage.html"), r1.text)
 
-    print("Step2: 获取 scode/sxh")
-    r_sess = s.post(SESS_URL, headers=COMMON_HEADERS, timeout=15)
-    if "#" not in r_sess.text:
-        raise RuntimeError("flag=sess 未返回 scode/sxh")
+    print("Step2: 获取 scode / sxh")
+    r_sess = s.post(SESS_URL, timeout=15)
     scode, sxh = r_sess.text.strip().split("#", 1)
-    print("scode len:", len(scode), "sxh len:", len(sxh))
 
     captcha = download_captcha_and_ocr(s)
     encoded = make_encoded(USERNAME, PASSWORD, scode, sxh)
-    encoded_q = urllib.parse.quote_plus(encoded)
-    body = f"userAccount={USERNAME}&userPassword=&RANDOMCODE={urllib.parse.quote_plus(captcha)}&encoded={encoded_q}"
+
+    body = (
+        f"userAccount={USERNAME}"
+        f"&userPassword="
+        f"&RANDOMCODE={urllib.parse.quote_plus(captcha)}"
+        f"&encoded={urllib.parse.quote_plus(encoded)}"
+    )
 
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
@@ -159,77 +157,50 @@ def login_via_raw_body():
         "User-Agent": COMMON_HEADERS["User-Agent"],
     }
 
-    print("Step3: 发送登录请求...")
-    r_post = s.post(LOGIN_POST, data=body.encode("utf-8"), headers=headers, allow_redirects=False, timeout=20)
+    print("Step3: 提交登录请求")
+    r_post = s.post(
+        LOGIN_POST,
+        data=body.encode(),
+        headers=headers,
+        allow_redirects=False
+    )
     return s, r_post
 
-# ---------------- 自动判断当前周 ----------------
-# def get_current_week():
-#     open_day = datetime(2025, 9, 15, tzinfo=timezone(timedelta(hours=8)))  # 开学日
-#     now = datetime.now(timezone(timedelta(hours=8)))
-#     days_diff = (now - open_day).days
-#     if days_diff < 0:
-#         return 1
-#     return (days_diff // 7) + 1
-
-# ---------------- EXPORT XLS (导出 1~21 周所有课程) ----------------
+# ================= EXPORT =================
 def export_course_xls(session, login_resp):
-    if 300 <= login_resp.status_code < 400 and login_resp.headers.get("Location"):
-        loc = login_resp.headers["Location"]
-        if loc.startswith("/"):
-            loc = BASE.rstrip("/") + loc
-        print(f"✅ 登录成功！访问重定向地址以激活登录态: {loc}")
-        session.get(loc, headers=COMMON_HEADERS, timeout=15)
+    if "Location" not in login_resp.headers:
+        print("❌ 登录失败")
+        return
 
-        # week_number = get_current_week()
-        # print(f"📅 自动识别当前为第 {week_number} 周")
+    loc = login_resp.headers["Location"]
+    if loc.startswith("/"):
+        loc = BASE + loc
 
-        out_dir = Path("extracted_courses")
-        out_dir.mkdir(exist_ok=True)
+    session.get(loc, timeout=15)
+    out_dir = Path("extracted_courses")
+    out_dir.mkdir(exist_ok=True)
 
-        # 循环导出 1~21 周
-        for week in range(1, 22):
-            print(f"📤 正在导出第 {week} 周课程表...")
+    for week in range(1, 22):
+        print(f"📤 导出第 {week} 周课程表")
+        params = {
+            "xnxq01id": "2025-2026-1",
+            "zc": str(week),
+            "kbjcmsid": "C26030BDC5F8456CBE75B8779AED2F8A",
+            "wkbkc": "1",
+        }
 
-            params = {
-                "xnxq01id": "2025-2026-1",
-                "zc": str(week),
-                "kbjcmsid": "C26030BDC5F8456CBE75B8779AED2F8A",
-                "wkbkc": "1",
-            }
+        r = session.get(COURSE_EXPORT_URL, params=params, timeout=20)
+        save_path = out_dir / f"courses_week_{week:02}.xls"
+        save_path.write_bytes(r.content)
 
-            export_headers = {
-                "Referer": f"{BASE}/jsxsd/xskb/xskb_list.do",
-                "Origin": BASE,
-                "User-Agent": COMMON_HEADERS["User-Agent"],
-                "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-            }
+        if b"loginForm" in r.content:
+            print(f"❌ 第 {week} 周失败（登录失效）")
+        else:
+            print(f"✅ 第 {week} 周成功: {save_path}")
 
-            r_export = session.get(
-                COURSE_EXPORT_URL,
-                headers=export_headers,
-                params=params,
-                timeout=20
-            )
+    print("🎉 1~21 周课程导出完成")
 
-            save_path = out_dir / f"courses_week_{week:02}.xls"
-            with open(save_path, "wb") as f:
-                f.write(r_export.content)
-
-            content_bytes = r_export.content
-            if (b"loginForm" in content_bytes) or ("请输入账号".encode("utf-8") in content_bytes):
-                print(f"❌ 第 {week} 周导出失败：登录态失效（返回登录页HTML）")
-            else:
-                print(f"✅ 第 {week} 周导出成功: {save_path}")
-
-        print("🎉 所有 1~21 周课程导出完成！文件保存在 extracted_courses/ 目录下")
-
-    else:
-        print("❌ 登录未成功，请检查 debug_loginpage.html")
-
-
-
-# ---------------- MAIN ----------------
+# ================= MAIN =================
 if __name__ == "__main__":
-    session, login_resp = login_via_raw_body()
-    export_course_xls(session, login_resp)
+    session, resp = login_via_raw_body()
+    export_course_xls(session, resp)
