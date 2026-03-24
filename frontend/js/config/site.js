@@ -8,9 +8,9 @@ export const siteConfig = {
         url: "https://beian.miit.gov.cn"
     },
     police: {
-        enabled: false,
-        text: "京公网安备 11010802012345号",
-        url: "http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=11010802012345",
+        enabled: true,
+        text: "豫公网安备41030502001184号",
+        url: "http://www.beian.gov.cn/portal/registerSystemInfo?recordcode=41030502001184",
         icon: "assets/icons/police_badge.png" // 警徽图标路径
     }
 };

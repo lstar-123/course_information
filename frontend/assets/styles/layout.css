@@ -1,65 +1,81 @@
 /* App 容器 */
 .app-container {
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
     min-height: 100vh;
     display: flex;
     flex-direction: column;
+    padding: 0 20px;
 }
 
 .app-header {
-    background: var(--bg-card);
-    padding: var(--spacing-md);
     position: sticky;
     top: 0;
-    z-index: 100;
+    z-index: 30;
+    margin-top: 20px;
+    background: rgba(255, 255, 255, 0.85);
+    backdrop-filter: blur(8px);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
     box-shadow: var(--shadow-sm);
+    padding: 14px 20px;
 }
 
 .header-content {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    gap: 12px;
 }
 
 .header-content h1 {
-    font-size: 1.25rem;
-    color: var(--primary-color);
+    font-size: 1.05rem;
+    font-weight: 650;
+    letter-spacing: 0.02em;
+    color: var(--text-main);
 }
 
 .current-date {
-    font-size: 0.9rem;
+    font-size: 0.84rem;
     color: var(--text-secondary);
+    padding: 4px 10px;
+    background: var(--bg-subtle);
+    border: 1px solid var(--border-color);
+    border-radius: 999px;
 }
 
 .app-main {
-    padding: var(--spacing-md);
+    padding: 20px 0 30px;
     flex: 1;
 }
 
-/* 响应式调整 */
-@media (max-width: 768px) {
-    .app-main {
-        padding: var(--spacing-sm);
-    }
+.control-panel {
+    margin-bottom: 16px;
+}
+
+.schedule-view {
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-lg);
+    padding: 16px;
+    box-shadow: var(--shadow-md);
 }
 
 /* 底部 */
 .site-footer {
     width: 100%;
-    background-color: #f7f8fa; /* 浅灰底色 */
-    padding: 24px 16px;
-    border-top: 1px solid #e5e6eb;
-    margin-top: auto; /* 配合 Flex 布局沉底 */
+    background: transparent;
+    padding: 20px 0 28px;
+    margin-top: auto;
 }
 
 .footer-content {
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
     text-align: center;
     font-size: 12px;
-    color: #86909c; /* 弱化字体颜色 */
-    line-height: 1.5;
+    color: var(--text-muted);
+    line-height: 1.6;
 }
 
 .footer-row {
@@ -67,13 +83,12 @@
     display: flex;
     justify-content: center;
     align-items: center;
-    flex-wrap: wrap; /* 移动端自动换行 */
-    gap: 8px; /* 项目间距 */
+    flex-wrap: wrap;
+    gap: 8px;
 }
 
-/* 链接通用样式 */
 .beian-link {
-    color: inherit; /* 继承父级灰色 */
+    color: inherit;
     text-decoration: none;
     transition: color 0.2s ease;
     display: inline-flex;
@@ -81,17 +96,14 @@
 }
 
 .beian-link:hover {
-    color: #2979ff; /* 悬停使用主色 */
-    text-decoration: underline;
+    color: var(--text-main);
 }
 
-/* 分隔符 */
 .divider {
-    color: #e5e6eb;
+    color: #d6d3d1;
     margin: 0 4px;
 }
 
-/* 公安图标特殊处理 */
 .police-icon {
     width: 16px;
     height: 16px;
@@ -99,14 +111,40 @@
     vertical-align: middle;
 }
 
-/* 响应式适配 */
+@media (max-width: 768px) {
+    .app-container {
+        padding: 0 12px;
+    }
+
+    .app-header {
+        margin-top: 12px;
+        padding: 12px 14px;
+    }
+
+    .header-content h1 {
+        font-size: 1rem;
+    }
+
+    .current-date {
+        font-size: 0.78rem;
+    }
+
+    .app-main {
+        padding: 12px 0 20px;
+    }
+
+    .schedule-view {
+        padding: 12px;
+    }
+}
+
 @media (max-width: 480px) {
     .divider {
-        display: none; /* 手机上隐藏分隔符，直接换行 */
+        display: none;
     }
-    
+
     .footer-row {
-        flex-direction: column; /* 手机上垂直排列 */
+        flex-direction: column;
         gap: 4px;
     }
 }

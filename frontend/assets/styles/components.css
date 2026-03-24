@@ -3,159 +3,168 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: var(--bg-card);
-    padding: var(--spacing-sm) var(--spacing-md);
+    background: var(--bg-surface);
+    padding: 10px 14px;
     border-radius: var(--radius-md);
-    margin-bottom: var(--spacing-md);
-    box-shadow: var(--shadow-sm);
+    border: 1px solid var(--border-color);
+    margin-bottom: 8px;
 }
 
 .week-btn {
-    background: none;
-    border: none;
-    color: var(--primary-color);
-    font-size: 1rem;
-    font-weight: bold;
-    padding: var(--spacing-sm);
+    border: 1px solid var(--border-color);
+    background: var(--bg-subtle);
+    color: var(--text-main);
+    font-size: 0.95rem;
+    font-weight: 600;
+    width: 34px;
+    height: 34px;
+    border-radius: 10px;
     cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.week-btn:hover:not(:disabled) {
+    background: #f0f0ef;
+    transform: translateY(-1px);
 }
 
 .week-btn:disabled {
-    color: var(--text-light);
+    color: var(--text-muted);
     cursor: not-allowed;
+    opacity: 0.6;
 }
 
 .week-display {
-    font-weight: 600;
-    font-size: 1rem;
+    font-weight: 620;
+    font-size: 0.95rem;
+    color: var(--text-secondary);
 }
 
 /* --- Schedule Grid --- */
 .schedule-grid {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-md);
+    gap: 12px;
 }
 
-/* --- Day Column (Mobile: Flex Block) --- */
 .day-column {
     display: flex;
     flex-direction: column;
-    gap: var(--spacing-sm);
-    background: #fff;
-    padding: var(--spacing-sm);
-    border-radius: var(--radius-sm);
+    gap: 8px;
+    background: var(--bg-surface);
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius-md);
+    padding: 12px;
 }
 
 .day-column.is-today {
-    border: 1px solid var(--primary-color);
+    border-color: #d6d3d1;
+    box-shadow: inset 0 0 0 1px #e7e5e4;
 }
 
 .day-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding-bottom: var(--spacing-xs);
+    padding-bottom: 8px;
     border-bottom: 1px solid var(--border-color);
-    margin-bottom: var(--spacing-xs);
-    font-weight: bold;
+    margin-bottom: 2px;
+    font-weight: 600;
 }
 
-.day-name { color: var(--text-main); }
-.day-date { font-size: 0.8rem; color: var(--text-secondary); }
+.day-name {
+    color: var(--text-main);
+}
 
-/* --- Desktop View: Magic Alignment --- */
+.day-date {
+    font-size: 0.8rem;
+    color: var(--text-muted);
+}
+
 @media (min-width: 768px) {
     .schedule-grid {
         display: grid;
-        /* 7列，每列等宽 */
         grid-template-columns: repeat(7, 1fr);
-        /* 自动行高，第一行(Header)自适应，其余行(课程)自适应 */
-        grid-auto-rows: minmax(100px, auto); 
-        gap: var(--spacing-sm);
-        align-items: stretch; /* 拉伸高度使同一行等高 */
+        grid-auto-rows: minmax(96px, auto);
+        gap: 10px;
+        align-items: stretch;
     }
 
-    /* 关键：使用 contents 让 day-column 消失，
-       其子元素(Header, Card)直接变为 Grid 的子元素 */
     .day-column {
         display: contents;
     }
 
-    /* 重置一些 Mobile 样式 */
     .day-header {
-        grid-row: 1; /* 强制所有表头在第一行 */
-        grid-column: var(--day-col); /* 根据 JS 传入的变量定位列 */
-        
-        display: block;
+        grid-row: 1;
+        grid-column: var(--day-col);
+        display: flex;
+        justify-content: center;
+        gap: 6px;
         text-align: center;
-        background: transparent;
-        border-bottom: 2px solid var(--primary-light);
-        margin-bottom: var(--spacing-md);
+        border: 1px solid var(--border-color);
+        border-radius: 10px;
+        margin-bottom: 0;
+        background: var(--bg-subtle);
+        padding: 8px;
     }
 
     .day-column.is-today .day-header {
-        border-bottom-color: var(--primary-color);
-        color: var(--primary-color);
+        background: #efefee;
+        border-color: #d6d3d1;
     }
-    
+
     .course-card {
-        grid-column: var(--day-col); /* 定位到对应那一天 */
-        grid-row: var(--section-row); /* 定位到对应那一节 */
+        grid-column: var(--day-col);
+        grid-row: var(--section-row);
         margin-bottom: 0;
-        height: 100%; /* 填满格子高度 */
+        height: 100%;
     }
 }
 
 /* --- Course Card --- */
 .course-card {
-    background: var(--bg-card); /* Desktop下如果背景是透明的，这里需要设为白色 */
-    border-radius: var(--radius-sm);
-    padding: var(--spacing-sm);
+    background: var(--bg-surface);
+    border-radius: 12px;
+    padding: 10px;
+    border: 1px solid var(--border-color);
     box-shadow: var(--shadow-sm);
-    border-left: 4px solid var(--primary-color);
-    transition: transform 0.2s;
-    font-size: 0.9rem;
+    transition: all 0.2s ease;
+    font-size: 0.88rem;
     display: flex;
     flex-direction: column;
     justify-content: flex-start;
+    min-height: 84px;
 }
 
-/* Mobile specific styling for card inside column */
-@media (max-width: 767px) {
-    .course-card {
-        background: var(--bg-body); /* 在白色卡片背景上的微弱对比 */
-        border: 1px solid var(--border-color);
-        box-shadow: none;
-    }
-}
-
-.course-card:active {
-    transform: scale(0.98);
+.course-card:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 6px 14px rgba(0, 0, 0, 0.06);
 }
 
 .course-name {
-    font-weight: 600;
-    margin-bottom: var(--spacing-xs);
+    font-weight: 610;
+    margin-bottom: 6px;
     color: var(--text-main);
+    line-height: 1.35;
 }
 
 .course-info {
     display: flex;
     flex-direction: column;
-    gap: 2px;
-    font-size: 0.8rem;
+    gap: 3px;
+    font-size: 0.78rem;
     color: var(--text-secondary);
-    margin-top: auto; /* Push info to bottom */
+    margin-top: auto;
 }
 
 .course-section {
-    color: var(--primary-dark);
-    font-weight: 500;
-    font-size: 0.75rem;
-    background: var(--primary-light);
+    color: var(--text-main);
+    font-weight: 560;
+    font-size: 0.72rem;
+    background: #f0f0ef;
+    border: 1px solid var(--border-color);
     padding: 2px 6px;
-    border-radius: 4px;
+    border-radius: 999px;
     align-self: flex-start;
     margin-bottom: 4px;
 }
@@ -166,10 +175,3 @@
     gap: 4px;
 }
 
-/* Empty State */
-.no-course {
-    text-align: center;
-    color: var(--text-light);
-    font-size: 0.8rem;
-    padding: var(--spacing-lg) 0;
-}

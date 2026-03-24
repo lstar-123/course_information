@@ -4,50 +4,50 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>我的课程表</title>
-    
+
     <link rel="icon" type="image/svg+xml" href="./assets/icons/calendar.svg">
     <link rel="stylesheet" href="./assets/styles/base.css">
     <link rel="stylesheet" href="./assets/styles/layout.css">
     <link rel="stylesheet" href="./assets/styles/components.css">
 </head>
+
 <body>
+<div id="app" class="app-container">
+    <header class="app-header">
+        <div class="header-content">
+            <h1>课程表</h1>
+            <div id="current-date-display" class="current-date">Loading...</div>
+        </div>
+    </header>
 
-    <div id="app" class="app-container">
-        <header class="app-header">
-            <div class="header-content">
-                <h1>课程表</h1>
-                <div id="current-date-display" class="current-date">Loading...</div>
+    <main class="app-main">
+        <section id="week-selector-container" class="control-panel"></section>
+
+        <section id="schedule-container" class="schedule-view"></section>
+    </main>
+
+    <footer class="site-footer">
+        <div class="footer-content">
+            <div class="footer-row copyright">
+                <span id="copyright-text"></span>
             </div>
-        </header>
 
-        <main class="app-main">
-            <section id="week-selector-container" class="control-panel"></section>
+            <div class="footer-row beian-info">
+                <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer" class="beian-link">
+                    <span id="icp-text"></span>
+                </a>
 
-            <section id="schedule-container" class="schedule-view"></section>
-        </main>
+                <span class="divider">|</span>
 
-        <footer class="site-footer">
-            <div class="footer-content">
-                <div class="footer-row copyright">
-                    <span id="copyright-text"></span>
-                </div>
-                
-                <div class="footer-row beian-info">
-                    <a href="https://beian.miit.gov.cn" target="_blank" rel="noopener noreferrer" class="beian-link">
-                        <span id="icp-text"></span>
-                    </a>
-
-                    <span class="divider">|</span>
-
-                    <a id="police-link" href="" target="_blank" rel="noopener noreferrer" class="beian-link police-link">
-                        <img src="./assets/icons/police.png" alt="警徽" class="police-icon" />
-                        <span id="police-text"></span>
-                    </a>
-                </div>
+                <a id="police-link" href="" target="_blank" rel="noopener noreferrer" class="beian-link police-link">
+                    <img src="./assets/icons/police_badge.png" alt="警徽" class="police-icon" />
+                    <span id="police-text"></span>
+                </a>
             </div>
-        </footer>
-    </div>
+        </div>
+    </footer>
+</div>
 
-    <script type="module" src="./js/main.js"></script>
+<script type="module" src="./js/main.js"></script>
 </body>
 </html>
